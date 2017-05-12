@@ -213,6 +213,7 @@ static const char *usbasp_get_funcname(unsigned char functionid)
   case USBASP_FUNC_TPI_RAWWRITE:    return "USBASP_FUNC_TPI_RAWWRITE";    break;
   case USBASP_FUNC_TPI_READBLOCK:   return "USBASP_FUNC_TPI_READBLOCK";   break;
   case USBASP_FUNC_TPI_WRITEBLOCK:  return "USBASP_FUNC_TPI_WRITEBLOCK";  break;
+  case USBASP_FUNC_READ_RANDOM:     return "USBASP_FUNC_READ_RANDOM";     break;
   case USBASP_FUNC_GETCAPABILITIES: return "USBASP_FUNC_GETCAPABILITIES"; break;
   default:                          return "Unknown USBASP function";     break;
   }
@@ -1164,6 +1165,10 @@ static int usbasp_tpi_write_byte(PROGRAMMER * pgm, AVRPART * p, AVRMEM * m, unsi
   return -1;
 }
 
+static int usbasp_read_random(PROGRAMMER * pgm, const unsigned char *cmd, unsigned char *res, int count) {
+    uint8_t temp[4];
+    usbasp_transmit(pgm, 1, USBASP_FUNC_READ_RANDOM, temp, res, 8);
+}
 
 void usbasp_initpgm(PROGRAMMER * pgm)
 {
@@ -1194,6 +1199,9 @@ void usbasp_initpgm(PROGRAMMER * pgm)
   pgm->setup          = usbasp_setup;
   pgm->teardown       = usbasp_teardown;
   pgm->set_sck_period = usbasp_spi_set_sck_period;
+
+
+  pgm->spi            = usbasp_read_random;
 
 }
 

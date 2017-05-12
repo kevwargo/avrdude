@@ -26,6 +26,8 @@
 #include "avrdude.h"
 #include "libavrdude.h"
 
+static AVRMEM *random_mem = NULL;
+
 /***
  *** Elementary functions dealing with OPCODE structures
  ***/
@@ -352,6 +354,20 @@ AVRMEM * avr_locate_mem(AVRPART * p, char * desc)
   LNODEID ln;
   int matches;
   int l;
+
+  if (strcmp(desc, "random") == 0) {
+      if (! random_mem) {
+          random_mem = avr_new_memtype();
+          strncpy(random_mem->desc, "random", AVR_MEMDESCLEN);
+          random_mem->size = 8;
+          random_mem->buf = (unsigned char *)malloc(8);
+          if (! random_mem->buf) {
+              avrdude_message(MSG_INFO, "avr_locate_mem() (init random buf): out of memory\n");
+              exit(1);
+          }
+      }
+      return random_mem;
+  }
 
   l = strlen(desc);
   matches = 0;

@@ -322,6 +322,13 @@ int avr_read(PROGRAMMER * pgm, AVRPART * p, char * memtype,
             memtype, p->desc);
     return -1;
   }
+  if (strcmp(mem->desc, "random") == 0) {
+      if (strcmp(pgm->type, "usbasp") != 0) {
+          avrdude_message(MSG_INFO, "Random generator is supported only for usbasp programmers\n");
+          return -1;
+      }
+      return pgm->spi(pgm, NULL /*ignored*/, mem->buf, 0 /*ignored*/);
+  }
 
   /*
    * start with all 0xff
