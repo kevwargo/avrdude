@@ -16,10 +16,10 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-/* $Id$ */
+/* $Id: avrftdi.h 1329 2014-07-16 20:38:52Z joerg_wunsch $ */
 
 #ifndef avrftdi_h
-#define avrfdti_h
+#define avrftdi_h
 
 #include <stdint.h>
 

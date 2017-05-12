@@ -17,7 +17,7 @@
 #
 
 #
-# $Id$
+# $Id: Makefile.am 1357 2015-10-30 23:11:22Z joerg_wunsch $
 #
 
 EXTRA_DIST   = \
@@ -32,6 +32,7 @@ EXTRA_DIST   = \
 	ChangeLog-2010 \
 	ChangeLog-2011 \
 	ChangeLog-2012 \
+	ChangeLog-2013 \
 	avrdude.1 \
 	avrdude.spec \
 	bootstrap
@@ -58,16 +59,19 @@ AM_YFLAGS    = -d
 avrdude_CPPFLAGS = -DCONFIG_DIR=\"$(sysconfdir)\"
 
 libavrdude_a_CPPFLAGS = -DCONFIG_DIR=\"$(sysconfdir)\"
+libavrdude_la_CPPFLAGS = $(libavrdude_a_CPPFLAGS)
 
 avrdude_CFLAGS   = @ENABLE_WARNINGS@
 
 libavrdude_a_CFLAGS   = @ENABLE_WARNINGS@
+libavrdude_la_CFLAGS  = $(libavrdude_a_CFLAGS)
 
 avrdude_LDADD  = $(top_builddir)/$(noinst_LIBRARIES) @LIBUSB_1_0@ @LIBUSB@ @LIBFTDI1@ @LIBFTDI@ @LIBHID@ @LIBELF@ @LIBPTHREAD@ -lm
 
 bin_PROGRAMS = avrdude
 
 noinst_LIBRARIES = libavrdude.a
+lib_LTLIBRARIES = libavrdude.la
 
 # automake thinks these generated files should be in the distribution,
 # but this might cause trouble for some users, so we rather don't want
@@ -90,7 +94,6 @@ libavrdude_a_SOURCES = \
 	arduino.h \
 	arduino.c \
 	avr.c \
-	avr.h \
 	avr910.c \
 	avr910.h \
 	avrdude.h \
@@ -100,7 +103,6 @@ libavrdude_a_SOURCES = \
 	avrftdi_tpi.c \
 	avrftdi_tpi.h \
 	avrpart.c \
-	avrpart.h \
 	bitbang.c \
 	bitbang.h \
 	buspirate.c \
@@ -110,11 +112,15 @@ libavrdude_a_SOURCES = \
 	config.c \
 	config.h \
 	confwin.c \
-	confwin.h \
 	crc16.c \
 	crc16.h \
+	dfu.c \
+	dfu.h \
 	fileio.c \
-	fileio.h \
+	flip1.c \
+	flip1.h \
+	flip2.c \
+	flip2.h \
 	freebsd_ppi.h \
 	ft245r.c \
 	ft245r.h \
@@ -127,30 +133,23 @@ libavrdude_a_SOURCES = \
 	jtag3.c \
 	jtag3.h \
 	jtag3_private.h \
+	libavrdude.h \
 	linuxgpio.c \
 	linuxgpio.h \
-	linuxspi.c \
-	linuxspi.h \
 	linux_ppdev.h \
 	lists.c \
-	lists.h \
 	my_ddk_hidsdi.h \
 	par.c \
 	par.h \
 	pgm.c \
-	pgm.h \
 	pgm_type.c \
-	pgm_type.h \
 	pickit2.c \
 	pickit2.h \
 	pindefs.c \
-	pindefs.h \
 	ppi.c \
 	ppi.h \
 	ppiwin.c \
 	safemode.c \
-	safemode.h \
-	serial.h \
 	serbb.h \
 	serbb_posix.c \
 	serbb_win32.c \
@@ -173,10 +172,13 @@ libavrdude_a_SOURCES = \
 	usb_libusb.c \
 	usbtiny.h \
 	usbtiny.c \
-	update.h \
 	update.c \
 	wiring.h \
 	wiring.c
+libavrdude_la_SOURCES = $(libavrdude_a_SOURCES)
+libavrdude_la_LDFLAGS = -version-info 1:0
+
+include_HEADERS = libavrdude.h
 
 avrdude_SOURCES = \
 	main.c \
@@ -199,3 +201,5 @@ backup-avrdude-conf:
 		cp -pR ${DESTDIR}${sysconfdir}/avrdude.conf \
 			${DESTDIR}${sysconfdir}/avrdude.conf.bak; \
 	fi
+
+ACLOCAL_AMFLAGS = -I m4

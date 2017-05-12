@@ -17,13 +17,13 @@
 #
 
 #
-# $Id$
+# $Id: configure.ac 1376 2016-02-16 21:28:52Z joerg_wunsch $
 #
 
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.60)
-AC_INIT(avrdude, 6.1-svn-20130917, avrdude-dev@nongnu.org)
+AC_INIT(avrdude, 6.3, avrdude-dev@nongnu.org)
 
 AC_CANONICAL_BUILD
 AC_CANONICAL_HOST
@@ -32,6 +32,9 @@ AC_CANONICAL_TARGET
 AC_CONFIG_SRCDIR([main.c])
 AM_INIT_AUTOMAKE
 AC_CONFIG_HEADERS(ac_cfg.h)
+AC_CONFIG_MACRO_DIR([m4])
+
+LT_INIT()
 
 # Checks for programs.
 AC_PROG_CC
@@ -39,10 +42,6 @@ AC_PROG_INSTALL
 AC_PROG_SED
 AC_PROG_YACC
 AC_PROG_LEX
-AN_MAKEVAR([RANLIB], [AC_PROG_RANLIB])
-AN_PROGRAM([ranlib], [AC_PROG_RANLIB])
-AC_DEFUN([AC_PROG_RANLIB], [AC_CHECK_TARGET_TOOL(RANLIB, ranlib, :)])
-AC_PROG_RANLIB
 AN_MAKEVAR([AR], [AC_PROG_AR])
 AN_PROGRAM([ar], [AC_PROG_AR])
 AC_DEFUN([AC_PROG_AR], [AC_CHECK_TARGET_TOOL(AR, ar, :)])
@@ -82,7 +81,7 @@ AC_CHECK_LIB([ncurses], [tputs])
 AC_CHECK_LIB([readline], [readline])
 AH_TEMPLATE([HAVE_LIBELF],
             [Define if ELF support is enabled via libelf])
-AC_CHECK_LIB([elf], [elf_begin], [have_libelf=yes])
+AC_CHECK_LIB([elf], [elf_getshdrstrndx], [have_libelf=yes])
 if test x$have_libelf = xyes; then
    case $target in
        *)
@@ -186,16 +185,14 @@ AC_CHECK_HEADERS([limits.h stdlib.h string.h])
 AC_CHECK_HEADERS([fcntl.h sys/ioctl.h sys/time.h termios.h unistd.h])
 AC_CHECK_HEADERS([ddk/hidsdi.h],,,[#include <windows.h>
 #include <setupapi.h>])
-AH_TEMPLATE([HAVE_SPIDEV],
-            [Define if spidev support is enabled for linux])
-AC_CHECK_HEADERS([linux/spi/spidev.h], [have_spidev=yes])
-if test x$have_spidev == xyes; then
-    AC_DEFINE([HAVE_SPIDEV])
-fi
+
 
 # Checks for typedefs, structures, and compiler characteristics.
 AC_C_CONST
 AC_HEADER_TIME
+
+# WinSock2
+AC_CHECK_LIB([ws2_32], [puts])
 
 # Checks for library functions.
 AC_CHECK_FUNCS([memset select strcasecmp strdup strerror strncasecmp strtol strtoul gettimeofday usleep])
@@ -220,11 +217,10 @@ LIBS="${LIBS} ${LIBHID}"
 
 AH_TEMPLATE([HAVE_LIBHID],
             [Define if HID support is enabled via the Win32 DDK])
-AC_TRY_RUN([#include <windows.h>
+AC_TRY_LINK([#include <windows.h>
 #include <setupapi.h>
-$HIDINCLUDE
-
-int
+$HIDINCLUDE],
+[int
 main(void)
 {
     GUID hidGuid;
@@ -232,7 +228,7 @@ main(void)
 
     return 0;
 }
-], [have_libhid=yes], [have_libhid=no], [have_libhid=no])
+], [have_libhid=yes], [have_libhid=no])
 AC_MSG_RESULT([$have_libhid])
 if test x$have_libhid = xyes; then
    AC_DEFINE([HAVE_LIBHID])
@@ -547,11 +543,5 @@ if test x$enabled_linuxgpio = xyes; then
    echo "ENABLED    linuxgpio"
 else
    echo "DISABLED   linuxgpio"
-fi
-
-if test x$have_spidev = xyes; then
-   echo "ENABLED    linuxspi"
-else
-   echo "DISABLED   linnuxspi"
 fi
 

@@ -26,20 +26,20 @@
 #include <string.h>
 
 #include "avrdude.h"
-#include "pgm_type.h"
+#include "libavrdude.h"
 
 #include "arduino.h"
-#include "avr.h"
 #include "avr910.h"
 #include "avrftdi.h"
 #include "buspirate.h"
 #include "butterfly.h"
+#include "flip1.h"
+#include "flip2.h"
 #include "ft245r.h"
 #include "jtagmkI.h"
 #include "jtagmkII.h"
 #include "jtag3.h"
 #include "linuxgpio.h"
-#include "linuxspi.h"
 #include "par.h"
 #include "pickit2.h"
 #include "ppi.h"
@@ -52,7 +52,7 @@
 #include "wiring.h"
 
 
-const PROGRAMMER_TYPE const programmers_types[] = {
+const PROGRAMMER_TYPE programmers_types[] = {
         {"arduino", arduino_initpgm, arduino_desc},
         {"avr910", avr910_initpgm, avr910_desc},
         {"avrftdi", avrftdi_initpgm, avrftdi_desc},
@@ -66,6 +66,8 @@ const PROGRAMMER_TYPE const programmers_types[] = {
         {"dragon_jtag", jtagmkII_dragon_initpgm, jtagmkII_dragon_desc},
         {"dragon_pdi", jtagmkII_dragon_pdi_initpgm, jtagmkII_dragon_pdi_desc},
         {"dragon_pp", stk500v2_dragon_pp_initpgm, stk500v2_dragon_pp_desc},
+        {"flip1", flip1_initpgm, flip1_desc},
+        {"flip2", flip2_initpgm, flip2_desc},
         {"ftdi_syncbb", ft245r_initpgm, ft245r_desc},
         {"jtagmki", jtagmkI_initpgm, jtagmkI_desc},
         {"jtagmkii", jtagmkII_initpgm, jtagmkII_desc},
@@ -78,7 +80,6 @@ const PROGRAMMER_TYPE const programmers_types[] = {
         {"jtagice3_dw", jtag3_dw_initpgm, jtag3_dw_desc},
         {"jtagice3_isp", stk500v2_jtag3_initpgm, stk500v2_jtag3_desc},
         {"linuxgpio", linuxgpio_initpgm, linuxgpio_desc},
-        {"linuxspi", linuxspi_initpgm, linuxspi_desc},
         {"par", par_initpgm, par_desc},
         {"pickit2", pickit2_initpgm, pickit2_desc},
         {"serbb", serbb_initpgm, serbb_desc},

@@ -1,6 +1,6 @@
 /*
  * avrdude - A Downloader/Uploader for AVR device programmers
- * Copyright (C) 2000-2004  Brian S. Dean <bsd@bsdhome.com>
+ * Copyright (C) 2012 Kirill Levchenko
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,49 +16,20 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-/* $Id$ */
+/* $Id: flip2.h 1311 2014-05-19 10:01:59Z joerg_wunsch $ */
 
-#ifndef fileio_h
-#define fileio_h
-
-typedef enum {
-  FMT_AUTO,
-  FMT_SREC,
-  FMT_IHEX,
-  FMT_RBIN,
-  FMT_IMM,
-  FMT_HEX,
-  FMT_DEC,
-  FMT_OCT,
-  FMT_BIN,
-  FMT_ELF
-} FILEFMT;
-
-struct fioparms {
-  int    op;
-  char * mode;
-  char * iodesc;
-  char * dir;
-  char * rw;
-  unsigned int fileoffset;
-};
-
-enum {
-  FIO_READ,
-  FIO_WRITE
-};
+#ifndef flip2_h
+#define flip2_h
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-char * fmtstr(FILEFMT format);
-
-int fileio(int op, char * filename, FILEFMT format,
-           struct avrpart * p, char * memtype, int size);
+extern const char flip2_desc[];
+extern void flip2_initpgm(PROGRAMMER * pgm);
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif
+#endif /* flip2_h */

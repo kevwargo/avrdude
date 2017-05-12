@@ -29,9 +29,8 @@
 #include <errno.h>
 
 #include "avrdude.h"
-#include "avr.h"
-#include "pindefs.h"
-#include "pgm.h"
+#include "libavrdude.h"
+
 #include "bitbang.h"
 
 #if HAVE_LINUXGPIO
@@ -67,7 +66,7 @@ static int linuxgpio_export(unsigned int gpio)
     return fd;
   }
 
-  len = snprintf(buf, sizeof(buf), "%d", gpio);
+  len = snprintf(buf, sizeof(buf), "%ud", gpio);
   r = write(fd, buf, len);
   close(fd);
 
@@ -85,7 +84,7 @@ static int linuxgpio_unexport(unsigned int gpio)
     return fd;
   }
 
-  len = snprintf(buf, sizeof(buf), "%d", gpio);
+  len = snprintf(buf, sizeof(buf), "%ud", gpio);
   r = write(fd, buf, len);
   close(fd);
 
@@ -96,7 +95,7 @@ static int linuxgpio_openfd(unsigned int gpio)
 {
   char filepath[60];
 
-  snprintf(filepath, sizeof(filepath), "/sys/class/gpio/gpio%d/value", gpio);
+  snprintf(filepath, sizeof(filepath), "/sys/class/gpio/gpio%ud/value", gpio);
   return (open(filepath, O_RDWR));
 }
 
@@ -105,7 +104,7 @@ static int linuxgpio_dir(unsigned int gpio, unsigned int dir)
   int fd, r;
   char buf[60];
 
-  snprintf(buf, sizeof(buf), "/sys/class/gpio/gpio%d/direction", gpio);
+  snprintf(buf, sizeof(buf), "/sys/class/gpio/gpio%ud/direction", gpio);
 
   fd = open(buf, O_WRONLY);
   if (fd < 0) {
@@ -145,9 +144,10 @@ static int linuxgpio_dir_in(unsigned int gpio)
 static int linuxgpio_fds[N_GPIO] ;
 
 
-static int linuxgpio_setpin(PROGRAMMER * pgm, int pin, int value)
+static int linuxgpio_setpin(PROGRAMMER * pgm, int pinfunc, int value)
 {
   int r;
+  int pin = pgm->pinno[pinfunc]; // TODO
 
   if (pin & PIN_INVERSE)
   {
@@ -171,10 +171,11 @@ static int linuxgpio_setpin(PROGRAMMER * pgm, int pin, int value)
   return 0;
 }
 
-static int linuxgpio_getpin(PROGRAMMER * pgm, int pin)
+static int linuxgpio_getpin(PROGRAMMER * pgm, int pinfunc)
 {
   unsigned char invert=0;
   char c;
+  int pin = pgm->pinno[pinfunc]; // TODO
 
   if (pin & PIN_INVERSE)
   {
@@ -200,14 +201,15 @@ static int linuxgpio_getpin(PROGRAMMER * pgm, int pin)
 
 }
 
-static int linuxgpio_highpulsepin(PROGRAMMER * pgm, int pin)
+static int linuxgpio_highpulsepin(PROGRAMMER * pgm, int pinfunc)
 {
-
+  int pin = pgm->pinno[pinfunc]; // TODO
+  
   if ( linuxgpio_fds[pin & PIN_MASK] < 0 )
     return -1;
 
-  linuxgpio_setpin(pgm, pin, 1);
-  linuxgpio_setpin(pgm, pin, 0);
+  linuxgpio_setpin(pgm, pinfunc, 1);
+  linuxgpio_setpin(pgm, pinfunc, 0);
 
   return 0;
 }
@@ -216,7 +218,7 @@ static int linuxgpio_highpulsepin(PROGRAMMER * pgm, int pin)
 
 static void linuxgpio_display(PROGRAMMER *pgm, const char *p)
 {
-    fprintf(stderr, "%sPin assignment  : /sys/class/gpio/gpio{n}\n",p);
+    avrdude_message(MSG_INFO, "%sPin assignment  : /sys/class/gpio/gpio{n}\n",p);
     pgm_display_generic_mask(pgm, p, SHOW_AVR_PINS);
 }
 
@@ -244,7 +246,8 @@ static int linuxgpio_open(PROGRAMMER *pgm, char *port)
 {
   int r, i, pin;
 
-  bitbang_check_prerequisites(pgm);
+  if (bitbang_check_prerequisites(pgm) < 0)
+    return -1;
 
 
   for (i=0; i<N_GPIO; i++)
@@ -258,14 +261,14 @@ static int linuxgpio_open(PROGRAMMER *pgm, char *port)
   //mostry LED status, can't be set to GPIO0. It can be fixed when a better 
   //solution exists.
   for (i=0; i<N_PINS; i++) {
-    if ( pgm->pinno[i] != 0 ||
+    if ( (pgm->pinno[i] & PIN_MASK) != 0 ||
          i == PIN_AVR_RESET ||
          i == PIN_AVR_SCK   ||
          i == PIN_AVR_MOSI  ||
          i == PIN_AVR_MISO ) {
         pin = pgm->pinno[i] & PIN_MASK;
         if ((r=linuxgpio_export(pin)) < 0) {
-            fprintf(stderr, "Can't export GPIO %d, already exported/busy?: %s",
+            avrdude_message(MSG_INFO, "Can't export GPIO %d, already exported/busy?: %s",
                     pin, strerror(errno));
             return r;
         }
@@ -342,9 +345,8 @@ const char linuxgpio_desc[] = "GPIO bitbanging using the Linux sysfs interface";
 
 void linuxgpio_initpgm(PROGRAMMER * pgm)
 {
-  fprintf(stderr,
-	  "%s: Linux sysfs GPIO support not available in this configuration\n",
-	  progname);
+  avrdude_message(MSG_INFO, "%s: Linux sysfs GPIO support not available in this configuration\n",
+                  progname);
 }
 
 const char linuxgpio_desc[] = "GPIO bitbanging using the Linux sysfs interface (not available)";

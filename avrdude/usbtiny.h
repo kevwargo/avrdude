@@ -20,14 +20,6 @@
 #ifndef usbtiny_h
 #define usbtiny_h
 
-#include "avrpart.h"
-
-// these are specifically assigned to USBtiny,
-// if you need your own VID and PIDs you can get them for cheap from
-// www.mecanique.co.uk so please don't reuse these. Thanks!
-#define USBTINY_VENDOR_DEFAULT  0x1781
-#define USBTINY_PRODUCT_DEFAULT 0x0C9F
-
 // Generic requests to the USBtiny
 #define	USBTINY_ECHO 	     0      // echo test
 #define	USBTINY_READ         1	    // read byte (wIndex:address)

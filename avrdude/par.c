@@ -16,7 +16,7 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-/* $Id$ */
+/* $Id: par.c 1321 2014-06-13 20:07:40Z awachtler $ */
 
 #include "ac_cfg.h"
 
@@ -36,9 +36,8 @@
 #endif
 
 #include "avrdude.h"
-#include "avr.h"
-#include "pindefs.h"
-#include "pgm.h"
+#include "libavrdude.h"
+
 #include "ppi.h"
 #include "bitbang.h"
 #include "par.h"
@@ -74,7 +73,7 @@ static struct ppipins_t ppipins[] = {
 
 #define NPINS (sizeof(ppipins)/sizeof(struct ppipins_t))
 
-static int par_setpin(PROGRAMMER * pgm, int pin, int value)
+static int par_setpin_internal(PROGRAMMER * pgm, int pin, int value)
 {
   int inverted;
 
@@ -103,23 +102,30 @@ static int par_setpin(PROGRAMMER * pgm, int pin, int value)
   return 0;
 }
 
-static void par_setmany(PROGRAMMER * pgm, unsigned int pinset, int value)
+static int par_setpin(PROGRAMMER * pgm, int pinfunc, int value)
+{
+  return par_setpin_internal(pgm, pgm->pinno[pinfunc], value);
+}
+
+static void par_setmany(PROGRAMMER * pgm, int pinfunc, int value)
 {
   int pin, mask;
+  int pinset = pgm->pinno[pinfunc];
 
   /* mask is anything non-pin - needs to be applied to each par_setpin to preserve inversion */
   mask = pinset & (~PIN_MASK);
 
   for (pin = 1; pin <= 17; pin++) {
     if (pinset & (1 << pin))
-      par_setpin(pgm, pin | mask, value);
+      par_setpin_internal(pgm, pin | mask, value);
   }
 }
 
-static int par_getpin(PROGRAMMER * pgm, int pin)
+static int par_getpin(PROGRAMMER * pgm, int pinfunc)
 {
   int value;
   int inverted;
+  int pin = pgm->pinno[pinfunc];
 
   inverted = pin & PIN_INVERSE;
   pin &= PIN_MASK;
@@ -144,9 +150,10 @@ static int par_getpin(PROGRAMMER * pgm, int pin)
 }
 
 
-static int par_highpulsepin(PROGRAMMER * pgm, int pin)
+static int par_highpulsepin(PROGRAMMER * pgm, int pinfunc)
 {
   int inverted;
+  int pin = pgm->pinno[pinfunc];
 
   inverted = pin & PIN_INVERSE;
   pin &= PIN_MASK;
@@ -185,7 +192,7 @@ static int par_highpulsepin(PROGRAMMER * pgm, int pin)
  */
 static void par_powerup(PROGRAMMER * pgm)
 {
-  par_setmany(pgm, pgm->pinno[PPI_AVR_VCC], 1);	/* power up */
+  par_setmany(pgm, PPI_AVR_VCC, 1);	/* power up */
   usleep(100000);
 }
 
@@ -195,12 +202,12 @@ static void par_powerup(PROGRAMMER * pgm)
  */
 static void par_powerdown(PROGRAMMER * pgm)
 {
-  par_setmany(pgm, pgm->pinno[PPI_AVR_VCC], 0);	/* power down */
+  par_setmany(pgm, PPI_AVR_VCC, 0);	/* power down */
 }
 
 static void par_disable(PROGRAMMER * pgm)
 {
-  par_setmany(pgm, pgm->pinno[PPI_AVR_BUFF], 1); /* turn off */
+  par_setmany(pgm, PPI_AVR_BUFF, 1); /* turn off */
 }
 
 static void par_enable(PROGRAMMER * pgm)
@@ -216,26 +223,27 @@ static void par_enable(PROGRAMMER * pgm)
    * and not via the buffer chip.
    */
 
-  par_setpin(pgm, pgm->pinno[PIN_AVR_RESET], 0);
+  par_setpin(pgm, PIN_AVR_RESET, 0);
   usleep(1);
 
   /*
    * enable the 74367 buffer, if connected; this signal is active low
    */
-  par_setmany(pgm, pgm->pinno[PPI_AVR_BUFF], 0);
+  par_setmany(pgm, PPI_AVR_BUFF, 0);
 }
 
 static int par_open(PROGRAMMER * pgm, char * port)
 {
   int rc;
 
-  bitbang_check_prerequisites(pgm);
+  if (bitbang_check_prerequisites(pgm) < 0)
+    return -1;
 
   ppi_open(port, &pgm->fd);
   if (pgm->fd.ifd < 0) {
-    fprintf(stderr, "%s: failed to open parallel port \"%s\"\n\n",
+    avrdude_message(MSG_INFO, "%s: failed to open parallel port \"%s\"\n\n",
             progname, port);
-    exit(1);
+    return -1;
   }
 
   /*
@@ -243,14 +251,14 @@ static int par_open(PROGRAMMER * pgm, char * port)
    */
   rc = ppi_getall(&pgm->fd, PPIDATA);
   if (rc < 0) {
-    fprintf(stderr, "%s: error reading status of ppi data port\n", progname);
+    avrdude_message(MSG_INFO, "%s: error reading status of ppi data port\n", progname);
     return -1;
   }
   pgm->ppidata = rc;
 
   rc = ppi_getall(&pgm->fd, PPICTRL);
   if (rc < 0) {
-    fprintf(stderr, "%s: error reading status of ppi ctrl port\n", progname);
+    avrdude_message(MSG_INFO, "%s: error reading status of ppi ctrl port\n", progname);
     return -1;
   }
   pgm->ppictrl = rc;
@@ -269,18 +277,18 @@ static void par_close(PROGRAMMER * pgm)
   ppi_setall(&pgm->fd, PPIDATA, pgm->ppidata);
   ppi_setall(&pgm->fd, PPICTRL, pgm->ppictrl);
 
-  par_setmany(pgm, pgm->pinno[PPI_AVR_BUFF], 1);
+  par_setmany(pgm, PPI_AVR_BUFF, 1);
 
   /*
    * Handle exit specs.
    */
   switch (pgm->exit_reset) {
   case EXIT_RESET_ENABLED:
-    par_setpin(pgm, pgm->pinno[PIN_AVR_RESET], 0);
+    par_setpin(pgm, PIN_AVR_RESET, 0);
     break;
 
   case EXIT_RESET_DISABLED:
-    par_setpin(pgm, pgm->pinno[PIN_AVR_RESET], 1);
+    par_setpin(pgm, PIN_AVR_RESET, 1);
     break;
 
   case EXIT_RESET_UNSPEC:
@@ -304,11 +312,11 @@ static void par_close(PROGRAMMER * pgm)
 
   switch (pgm->exit_vcc) {
   case EXIT_VCC_ENABLED:
-    par_setmany(pgm, pgm->pinno[PPI_AVR_VCC], 1);
+    par_setmany(pgm, PPI_AVR_VCC, 1);
     break;
 
   case EXIT_VCC_DISABLED:
-    par_setmany(pgm, pgm->pinno[PPI_AVR_VCC], 0);
+    par_setmany(pgm, PPI_AVR_VCC, 0);
     break;
 
   case EXIT_VCC_UNSPEC:
@@ -394,9 +402,8 @@ void par_initpgm(PROGRAMMER * pgm)
 
 void par_initpgm(PROGRAMMER * pgm)
 {
-  fprintf(stderr,
-	  "%s: parallel port access not available in this configuration\n",
-	  progname);
+  avrdude_message(MSG_INFO, "%s: parallel port access not available in this configuration\n",
+                  progname);
 }
 
 #endif /* HAVE_PARPORT */
